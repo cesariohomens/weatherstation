@@ -1,18 +1,28 @@
 #include <Arduino.h>
+#include "wifi.h"
+#include "bme280.h"
+#include "webserver.h"
 
-// put function declarations here:
-int myFunction(int, int);
+WifiAp wifiAp;
+Bme280Service bme280;
+WebServerHandler webServer;
 
 void setup() {
-  // put your setup code here, to run once:
-  int result = myFunction(2, 3);
+  Serial.begin(115200);
+  delay(200);
+
+  wifiAp.start();
+  Serial.print("AP iniciado em ");
+  Serial.println(wifiAp.ip());
+
+  if (!bme280.begin()) {
+    Serial.println("Falha ao iniciar BME280. Verifique as ligacoes I2C.");
+  }
+
+  webServer.begin(bme280);
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-}
-
-// put function definitions here:
-int myFunction(int x, int y) {
-  return x + y;
+  webServer.handleClient();
+  delay(10);
 }
