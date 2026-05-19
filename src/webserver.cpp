@@ -186,11 +186,44 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 
 }  // namespace
 
+bool WebServerHandler::isCaptiveProbe() {
+  const String& host = server.hostHeader();
+  return host != F("weatherstation.local") && host != F("192.168.4.1");
+}
+
+void WebServerHandler::handleCaptiveRedirect() {
+  server.sendHeader("Location", F("http://weatherstation.local/"), true);
+  server.send(302, F("text/plain"), F("Redirecting"));
+}
+
+void WebServerHandler::handleNotFound() {
+  if (server.uri().startsWith(F("/api/"))) {
+    server.send(404, F("application/json"), F("{\"error\":\"not found\"}"));
+    return;
+  }
+  if (isCaptiveProbe()) {
+    handleCaptiveRedirect();
+    return;
+  }
+  server.send(404, F("text/plain"), F("Not found"));
+}
+
 void WebServerHandler::begin(Bme280Service& sensorRef) {
   sensor = &sensorRef;
-  server.on("/", HTTP_GET, [this]() { handleRoot(); });
-  server.on("/api/readings", HTTP_GET, [this]() { handleReadings(); });
-  server.onNotFound([this]() { server.send(404, "text/plain", "Not found"); });
+  server.on(F("/"), HTTP_GET, [this]() { handleRoot(); });
+  server.on(F("/api/readings"), HTTP_GET, [this]() { handleReadings(); });
+
+  // OS captive-portal connectivity checks
+  server.on(F("/generate_204"), HTTP_ANY, [this]() { handleCaptiveRedirect(); });
+  server.on(F("/gen_204"), HTTP_ANY, [this]() { handleCaptiveRedirect(); });
+  server.on(F("/hotspot-detect.html"), HTTP_ANY, [this]() { handleCaptiveRedirect(); });
+  server.on(F("/library/test/success.html"), HTTP_ANY, [this]() { handleCaptiveRedirect(); });
+  server.on(F("/connecttest.txt"), HTTP_ANY, [this]() { handleCaptiveRedirect(); });
+  server.on(F("/ncsi.txt"), HTTP_ANY, [this]() { handleCaptiveRedirect(); });
+  server.on(F("/redirect"), HTTP_ANY, [this]() { handleCaptiveRedirect(); });
+  server.on(F("/canonical.html"), HTTP_ANY, [this]() { handleCaptiveRedirect(); });
+
+  server.onNotFound([this]() { handleNotFound(); });
   server.begin();
 }
 

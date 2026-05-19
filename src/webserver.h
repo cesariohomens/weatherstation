@@ -12,6 +12,9 @@ class WebServerHandler {
  private:
   void handleRoot();
   void handleReadings();
+  void handleCaptiveRedirect();
+  void handleNotFound();
+  bool isCaptiveProbe();
 
   WebServer server{80};
   Bme280Service* sensor{nullptr};
