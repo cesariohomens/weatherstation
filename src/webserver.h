@@ -1,6 +1,7 @@
 #pragma once
 
 #include <WebServer.h>
+
 #include "bme280.h"
 
 class WebServerHandler {
@@ -15,4 +16,3 @@ class WebServerHandler {
   WebServer server{80};
   Bme280Service* sensor{nullptr};
 };
-

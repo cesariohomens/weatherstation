@@ -1,1 +1,0 @@
-../.pio/libdeps/esp32doit-devkit-v1/Adafruit BME280 Library/Adafruit_BME280.h

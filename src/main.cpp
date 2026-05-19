@@ -1,7 +1,8 @@
 #include <Arduino.h>
-#include "wifi.h"
+
 #include "bme280.h"
 #include "webserver.h"
+#include "wifi.h"
 
 WifiAp wifiAp;
 Bme280Service bme280;
@@ -12,11 +13,11 @@ void setup() {
   delay(200);
 
   wifiAp.start();
-  Serial.print("AP iniciado em ");
+  Serial.print("AP started at ");
   Serial.println(wifiAp.ip());
 
   if (!bme280.begin()) {
-    Serial.println("Falha ao iniciar BME280. Verifique as ligacoes I2C.");
+    Serial.println("BME280 init failed. Check I2C wiring.");
   }
 
   webServer.begin(bme280);

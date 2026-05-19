@@ -7,4 +7,3 @@ void WifiAp::start() {
 }
 
 IPAddress WifiAp::ip() const { return ipAddress; }
-

@@ -1,6 +1,6 @@
 #include "bme280.h"
 
-#include <Arduino.h>
+#include <math.h>
 
 bool Bme280Service::begin() {
   if (initialized) {
@@ -9,37 +9,29 @@ bool Bme280Service::begin() {
 
   Wire.begin();
 
-  // Tenta ambos os endereços comuns (0x76 e 0x77), útil para módulos GYBMEP.
-  const uint8_t candidates[2] = {kAddressPrimary, kAddressSecondary};
-  for (uint8_t addr : candidates) {
-    if (bme.begin(addr)) {
-      selectedAddress = addr;
-      initialized = true;
-      break;
+  for (uint8_t address : {kI2cAddressPrimary, kI2cAddressSecondary}) {
+    if (!bme.begin(address)) {
+      continue;
     }
+
+    const uint8_t chipId = bme.sensorID();
+    if (chipId == kChipIdBme280) {
+      hasHumidity = true;
+    } else if (chipId == kChipIdBmp280) {
+      hasHumidity = false;
+    } else {
+      continue;
+    }
+
+    initialized = true;
+    return true;
   }
 
-  if (!initialized) {
-    return false;
-  }
-
-  const uint8_t chipId = bme.sensorID();
-  // 0x60 => BME280 (humidade ok), 0x58 => BMP280 (sem humidade).
-  if (chipId == 0x60) {
-    hasHumidity = true;
-  } else if (chipId == 0x58) {
-    hasHumidity = false;
-  } else {
-    initialized = false;
-    return false;
-  }
-
-  return true;
+  return false;
 }
 
 SensorReadings Bme280Service::read() {
   SensorReadings readings{};
-
   if (!initialized) {
     return readings;
   }
@@ -49,4 +41,3 @@ SensorReadings Bme280Service::read() {
   readings.pressureHpa = bme.readPressure() / 100.0F;
   return readings;
 }
-

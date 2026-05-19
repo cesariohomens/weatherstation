@@ -1,7 +1,6 @@
 #include "webserver.h"
 
-#include <Arduino.h>
-#include <WiFi.h>
+#include <math.h>
 
 namespace {
 
@@ -11,7 +10,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Weatherstation</title>
+  <title>Weather Station</title>
   <style>
     :root {
       --bg: #f5f7fa;
@@ -110,37 +109,37 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 <body>
   <div class="container">
     <div class="header">
-      <h1 class="title">Weatherstation</h1>
-      <span class="muted">Atualiza a cada 3s</span>
+      <h1 class="title">Weather Station</h1>
+      <span class="muted">Updates every 3s</span>
     </div>
     <div class="grid">
       <div class="card">
         <div class="card-row">
-          <span>Temperatura</span>
+          <span>Temperature</span>
           <span class="chip temp">°C</span>
         </div>
         <div id="tempValue" class="value">--.- °C</div>
-        <div class="bar temp" aria-label="Temperatura">
+        <div class="bar temp" aria-label="Temperature">
           <div id="tempBar" class="bar-fill temp" style="width:0%"></div>
         </div>
       </div>
       <div class="card">
         <div class="card-row">
-          <span>Humidade</span>
+          <span>Humidity</span>
           <span class="chip hum">%</span>
         </div>
         <div id="humValue" class="value">--.- %</div>
-        <div class="bar hum" aria-label="Humidade">
+        <div class="bar hum" aria-label="Humidity">
           <div id="humBar" class="bar-fill hum" style="width:0%"></div>
         </div>
       </div>
       <div class="card">
         <div class="card-row">
-          <span>Pressão</span>
+          <span>Pressure</span>
           <span class="chip pres">hPa</span>
         </div>
         <div id="pressValue" class="value">----.- hPa</div>
-        <div class="bar pres" aria-label="Pressao">
+        <div class="bar pres" aria-label="Pressure">
           <div id="pressBar" class="bar-fill pres" style="width:0%"></div>
         </div>
       </div>
@@ -159,9 +158,9 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
       document.getElementById("humValue").textContent = `${hum.toFixed(1)} %`;
       document.getElementById("pressValue").textContent = `${press.toFixed(1)} hPa`;
 
-      const tempPct = clamp(((temp + 10) / 60) * 100, 0, 100); // -10 to 50 °C
+      const tempPct = clamp(((temp + 10) / 60) * 100, 0, 100);
       const humPct = clamp(hum, 0, 100);
-      const pressPct = clamp(((press - 950) / 150) * 100, 0, 100); // 950-1100 hPa
+      const pressPct = clamp(((press - 950) / 150) * 100, 0, 100);
 
       document.getElementById("tempBar").style.width = `${tempPct}%`;
       document.getElementById("humBar").style.width = `${humPct}%`;
@@ -172,10 +171,9 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
       try {
         const response = await fetch("/api/readings");
         if (!response.ok) throw new Error("HTTP " + response.status);
-        const data = await response.json();
-        updateGauges(data);
+        updateGauges(await response.json());
       } catch (err) {
-        console.error("Erro ao obter leituras:", err);
+        console.error("Failed to fetch readings:", err);
       }
     }
 
@@ -190,7 +188,6 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 
 void WebServerHandler::begin(Bme280Service& sensorRef) {
   sensor = &sensorRef;
-
   server.on("/", HTTP_GET, [this]() { handleRoot(); });
   server.on("/api/readings", HTTP_GET, [this]() { handleReadings(); });
   server.onNotFound([this]() { server.send(404, "text/plain", "Not found"); });
@@ -199,19 +196,28 @@ void WebServerHandler::begin(Bme280Service& sensorRef) {
 
 void WebServerHandler::handleClient() { server.handleClient(); }
 
-void WebServerHandler::handleRoot() { server.send_P(200, "text/html", INDEX_HTML); }
+void WebServerHandler::handleRoot() {
+  server.send_P(200, "text/html", INDEX_HTML);
+}
 
 void WebServerHandler::handleReadings() {
-  if (sensor == nullptr) {
-    server.send(500, "application/json", "{\"error\":\"sensor not ready\"}");
+  if (sensor == nullptr || !sensor->isReady()) {
+    server.send(503, "application/json", "{\"error\":\"sensor not ready\"}");
     return;
   }
 
-  const auto readings = sensor->read();
-  char payload[160];
-  snprintf(payload, sizeof(payload),
-           "{\"temperature\":%.2f,\"humidity\":%.2f,\"pressure\":%.2f}",
-           readings.temperatureC, readings.humidity, readings.pressureHpa);
+  const SensorReadings readings = sensor->read();
+  char payload[128];
+
+  if (isnan(readings.humidity)) {
+    snprintf(payload, sizeof(payload),
+             "{\"temperature\":%.2f,\"humidity\":null,\"pressure\":%.2f}",
+             readings.temperatureC, readings.pressureHpa);
+  } else {
+    snprintf(payload, sizeof(payload),
+             "{\"temperature\":%.2f,\"humidity\":%.2f,\"pressure\":%.2f}",
+             readings.temperatureC, readings.humidity, readings.pressureHpa);
+  }
+
   server.send(200, "application/json", payload);
 }
-
