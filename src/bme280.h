@@ -27,6 +27,9 @@ class Bme280Service {
  private:
   Adafruit_BME280 bme;
   bool initialized{false};
-  static constexpr uint8_t kAddress = 0x76;
+   bool hasHumidity{true};
+  uint8_t selectedAddress{0x76};
+  static constexpr uint8_t kAddressPrimary = 0x76;
+  static constexpr uint8_t kAddressSecondary = 0x77;
 };
 
