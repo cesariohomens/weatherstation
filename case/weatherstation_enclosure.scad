@@ -66,10 +66,24 @@ bme_screw_hole_d = 2.2;   // M2 tap / clearance in plastic
 esp_standoff_od = 4.0;
 esp_pin_hole_d  = 0.85;   // hdr_pin_t = 0.64 mm square
 
+// Snap-fit — top shell clips onto floor tray lip
+snap_tab_w       = 7.0;
+snap_flex_t      = 1.1;
+snap_hook_depth  = 0.75;
+snap_inset       = 12.0;
+floor_lip_h      = 0.85;   // retention ring on base top edge
+floor_lip_inset  = 1.1;    // lip width on floor perimeter
+
+// Lid emboss — branding on top face (white — separate filament / 3MF colour)
+lid_emboss_h     = 0.5;
+lid_font         = "Liberation Sans:style=Bold";
+lid_font_light   = "Liberation Sans:style=Regular";
+lid_logo_color   = [1, 1, 1];
+
 // Preview / export
 show_assembly = true;
 show_boards   = true;
-show_top      = false;
+show_top      = true;
 export_part   = "assembly";
 
 case_gray_dark  = [0.34, 0.35, 0.37];
@@ -109,7 +123,133 @@ module usb_cut() {
     cube([1.6, usb_open_w + 2.4, usb_open_h + 2.0]);
 }
 
-// Standoffs rise from floor (part of base)
+// Perimeter lip on floor tray — hooks on top shell snap under this ring
+module floor_retention_lip() {
+  difference() {
+    translate([0, 0, floor - 0.01])
+      rounded_block(case_l, case_w, floor_lip_h, corner_r);
+    translate([floor_lip_inset, floor_lip_inset, floor - 0.02])
+      rounded_block(
+        case_l - 2 * floor_lip_inset,
+        case_w - 2 * floor_lip_inset,
+        floor_lip_h + 0.1,
+        max(corner_r - floor_lip_inset, 1.0)
+      );
+  }
+}
+
+// Finger notch on back wall to pry the top shell open
+module lid_release_notch() {
+  nw = 14.0;
+  nh = 1.4;
+  translate([case_l / 2 - nw / 2, -0.5, floor - 0.2])
+    cube([nw, wall + 1.2, nh + floor_lip_h + 0.4]);
+}
+
+// Cantilever clip at bottom of top shell — hooks under floor lip
+module snap_clip_x(y_center, positive_x) {
+  dir = positive_x ? 1 : -1;
+  x0  = positive_x ? (case_l - wall - snap_flex_t) : wall;
+  clip_h = floor_lip_h + 1.1;
+
+  translate([x0, y_center - snap_tab_w / 2, floor - 0.4])
+    union() {
+      cube([snap_flex_t, snap_tab_w, clip_h]);
+      translate([dir * snap_flex_t, 0, 0.15])
+        cube([dir * (snap_hook_depth + 0.35), snap_tab_w, 0.95]);
+      translate([dir * snap_flex_t, 0, 0.85])
+        cube([dir * (snap_hook_depth + 0.55), snap_tab_w, 0.55]);
+    }
+}
+
+module snap_clip_y(x_center, positive_y) {
+  dir = positive_y ? 1 : -1;
+  y0  = positive_y ? (case_w - wall - snap_flex_t) : wall;
+  clip_h = floor_lip_h + 1.1;
+
+  translate([x_center - snap_tab_w / 2, y0, floor - 0.4])
+    union() {
+      cube([snap_tab_w, snap_flex_t, clip_h]);
+      translate([0, dir * snap_flex_t, 0.15])
+        cube([snap_tab_w, dir * (snap_hook_depth + 0.35), 0.95]);
+      translate([0, dir * snap_flex_t, 0.85])
+        cube([snap_tab_w, dir * (snap_hook_depth + 0.55), 0.55]);
+    }
+}
+
+module snap_clips_top() {
+  for (cy = [snap_inset, case_w - snap_inset])
+    snap_clip_x(cy, true);
+  for (cx = [snap_inset + 8, case_l - snap_inset])
+    snap_clip_y(cx, false);
+}
+
+// ---------------------------------------------------------------------
+// Lid emboss — weather icons + product label
+// ---------------------------------------------------------------------
+
+// Single merged weather emblem — sun behind cloud + rain
+module weather_icon_merged_2d(s = 1) {
+  union() {
+    // Sun (upper left, partially hidden by cloud)
+    translate([-3.8 * s, 3.2 * s]) {
+      circle(r = 2.35 * s, $fn = 36);
+      for (a = [0 : 45 : 315])
+        rotate(a)
+          translate([0, 3.2 * s])
+            square([0.45 * s, 1.15 * s], center = true);
+    }
+
+    // Cloud (foreground — overlaps sun for one silhouette)
+    hull() {
+      translate([-2.6 * s, 0.4 * s]) circle(r = 2.0 * s, $fn = 28);
+      translate([0.5 * s, 1.5 * s]) circle(r = 2.35 * s, $fn = 28);
+      translate([3.0 * s, 0.5 * s]) circle(r = 1.85 * s, $fn = 28);
+    }
+
+    // Rain drops under cloud
+    for (dx = [-1.9, -0.65, 0.65, 1.9])
+      translate([dx * s, -2.6 * s])
+        scale([0.65, 1.15])
+          circle(r = 0.72 * s, $fn = 18);
+  }
+}
+
+module lid_emboss_extrude_2d() {
+  linear_extrude(lid_emboss_h)
+    children(0);
+}
+
+module lid_emboss_text(str, size, font) {
+  lid_emboss_extrude_2d()
+    offset(delta = 0.08, $fn = 12)
+      text(str, size = size, halign = "center", valign = "center", font = font);
+}
+
+module lid_emboss_decor() {
+  cx = case_l / 2;
+  cy = case_w / 2;
+  z0 = case_h - 0.01;
+
+  intersection() {
+    translate([0, 0, body_top_z - 0.01])
+      cube([case_l, case_w, lid_plate_h + lid_emboss_h + 0.02]);
+
+    union() {
+      translate([cx, cy + 9.75, z0])
+        lid_emboss_extrude_2d()
+          offset(delta = 0.06, $fn = 10)
+            weather_icon_merged_2d(1.23);
+
+      translate([cx, cy - 1.8, z0])
+        lid_emboss_text("Weather Station", 3.9, lid_font);
+
+      translate([cx, cy - 7.8, z0])
+        lid_emboss_text("v1.0", 3.0, lid_font_light);
+    }
+  }
+}
+
 module bme_mount_standoff_at(lx, ly) {
   standoff_h = bme_z - floor;
   difference() {
@@ -163,7 +303,10 @@ module feet() {
 module enclosure_bottom() {
   union() {
     color(case_gray_dark)
-      rounded_block(case_l, case_w, floor, corner_r);
+      union() {
+        rounded_block(case_l, case_w, floor, corner_r);
+        floor_retention_lip();
+      }
 
     bme_mount_standoffs();
     esp_pin_standoffs();
@@ -178,22 +321,38 @@ module enclosure_bottom_with_feet() {
 }
 
 // =====================================================================
-// Top — walls + flat lid only
+// Top — walls + flat lid (shell) + white logo insert
 // =====================================================================
 
-module enclosure_top() {
+module enclosure_top_shell() {
   shell_h = case_h - floor;
 
   color(case_gray_light)
     difference() {
-      translate([0, 0, floor])
-        rounded_block(case_l, case_w, shell_h, corner_r);
+      union() {
+        translate([0, 0, floor])
+          rounded_block(case_l, case_w, shell_h, corner_r);
+        snap_clips_top();
+      }
 
       inner_cavity(case_l, case_w, body_top_z - floor + 0.01, floor, corner_r);
 
       vent_grille_cut_y(vent_face_y, vent_cx, vent_cz, vent_w, vent_h);
       usb_cut();
+      lid_release_notch();
     }
+}
+
+module enclosure_top_logo() {
+  color(lid_logo_color)
+    lid_emboss_decor();
+}
+
+module enclosure_top() {
+  union() {
+    enclosure_top_shell();
+    enclosure_top_logo();
+  }
 }
 
 // =====================================================================
@@ -225,6 +384,10 @@ module full_assembly() {
 
 if (export_part == "bottom")
   enclosure_bottom_with_feet();
+else if (export_part == "top_shell")
+  enclosure_top_shell();
+else if (export_part == "top_logo")
+  enclosure_top_logo();
 else if (export_part == "top")
   enclosure_top();
 else if (show_assembly)

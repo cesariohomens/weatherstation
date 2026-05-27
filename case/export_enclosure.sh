@@ -16,9 +16,17 @@ openscad -D'export_part="bottom"' -D'show_assembly=false' -D'show_boards=false' 
   -o stl/enclosure_bottom.stl "$SRC"
 echo "Exported stl/enclosure_bottom.stl"
 
-openscad -D'export_part="top"' -D'show_assembly=false' -D'show_boards=false' \
+openscad -D'export_part="top_shell"' -D'show_assembly=false' -D'show_boards=false' \
   -o stl/enclosure_top.stl "$SRC"
-echo "Exported stl/enclosure_top.stl"
+echo "Exported stl/enclosure_top.stl (shell — assign body colour in slicer)"
+
+openscad -D'export_part="top_logo"' -D'show_assembly=false' -D'show_boards=false' \
+  -o stl/enclosure_top_logo.stl "$SRC"
+echo "Exported stl/enclosure_top_logo.stl (white logo — assign white filament)"
+
+openscad --export-format=3mf -D'export_part="top"' -D'show_assembly=false' -D'show_boards=false' \
+  -o stl/enclosure_top.3mf "$SRC"
+echo "Exported stl/enclosure_top.3mf (shell + white logo with colours)"
 
 openscad \
   --colorscheme=Tomorrow \
