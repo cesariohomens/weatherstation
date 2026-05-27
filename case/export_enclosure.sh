@@ -28,29 +28,28 @@ openscad --export-format=3mf -D'export_part="top"' -D'show_assembly=false' -D'sh
   -o stl/enclosure_top.3mf "$SRC"
 echo "Exported stl/enclosure_top.3mf (shell + white logo with colours)"
 
-openscad \
-  --colorscheme=Tomorrow \
-  --imgsize=1400,900 \
-  --camera="$CX",$CY,$CZ,55,0,25,220 \
-  -D'show_assembly=true' -D'show_boards=true' -D'show_top=true' -D'export_part="assembly"' \
-  -o previews/enclosure_iso.png \
-  "$SRC"
-echo "Exported previews/enclosure_iso.png"
+# ISO previews — base+lid, base+boards, base only
+ISO_CAM="--colorscheme=Tomorrow --imgsize=1400,900 --camera=$CX,$CY,$CZ,55,0,25,220"
 
-openscad \
-  --colorscheme=Tomorrow \
-  --imgsize=1400,900 \
-  --camera="$CX",$CY,$CZ,0,0,0,120 \
-  -D'show_assembly=true' -D'show_boards=true' -D'show_top=true' -D'export_part="assembly"' \
-  -o previews/enclosure_front.png \
+openscad $ISO_CAM \
+  -D'show_assembly=true' -D'show_boards=false' -D'show_top=true' -D'export_part="assembly"' \
+  -o previews/enclosure_iso_base_lid.png \
   "$SRC"
-echo "Exported previews/enclosure_front.png"
+echo "Exported previews/enclosure_iso_base_lid.png"
 
-openscad \
-  --colorscheme=Tomorrow \
-  --imgsize=1400,500 \
-  --camera="$CX",$CY,2,90,0,0,120 \
-  -D'show_assembly=true' -D'show_boards=true' -D'show_top=true' -D'export_part="assembly"' \
-  -o previews/enclosure_side.png \
+openscad $ISO_CAM \
+  -D'show_assembly=true' -D'show_boards=true' -D'show_top=false' -D'export_part="assembly"' \
+  -o previews/enclosure_iso_base_boards.png \
   "$SRC"
-echo "Exported previews/enclosure_side.png"
+echo "Exported previews/enclosure_iso_base_boards.png"
+
+openscad $ISO_CAM \
+  -D'show_assembly=true' -D'show_boards=false' -D'show_top=false' -D'export_part="assembly"' \
+  -o previews/enclosure_iso_base.png \
+  "$SRC"
+echo "Exported previews/enclosure_iso_base.png"
+
+# Legacy alias — full closed assembly ISO
+cp previews/enclosure_iso_base_lid.png previews/enclosure_iso.png
+echo "Exported previews/enclosure_iso.png (alias of base+lid)"
+
