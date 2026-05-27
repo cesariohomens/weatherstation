@@ -101,6 +101,36 @@ Detailed model of the purple GY-BME280 module (**12.0 × 15.0 × 1.6 mm**, width
 ./export_bme280.sh
 ```
 
+---
+
+## Weather station enclosure
+
+Gray indie-style case for the ESP32 DevKit + GY-BME280 breakout.
+
+| File | Description |
+|------|-------------|
+| `weatherstation_enclosure.scad` | Parametric shell + board placement |
+| `export_enclosure.sh` | Exports STLs and preview PNGs |
+| `stl/enclosure_bottom.stl` | Base shell (USB cutout, vent slots, open headroom) |
+| `stl/enclosure_top.stl` | Optional lid (front + top vent slots) |
+| `previews/enclosure_*.png` | Assembly previews with boards |
+
+### Features
+
+- **64 × 44 × 28 mm** outer shell, 2.4 mm walls, rounded corners, gray preview palette
+- **ESP32** in the rear bay; **USB-C** opening on the left wall
+- **BME280** in the front sensor bay, rotated **180°** on Z; **5 vent slots** on the front wall
+- **Open headroom** above both boards (no inner roof in those zones)
+- Hollow shell only — no internal standoffs or shelves
+- Preview shows **base + boards**; set `show_top = true` to include the lid
+
+```bash
+./export_enclosure.sh
+```
+
+Set `export_part` to `"bottom"` or `"top"` (or pass `-D'export_part="bottom"'`) to
+export a single shell.
+
 ## Notes
 
 - Origin is at the lower-left corner of the PCB. Z = 0 is the bottom of the PCB;

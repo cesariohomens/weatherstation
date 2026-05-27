@@ -7,7 +7,7 @@
 // - Through-hole header pins
 //
 
-$fn = 96;
+$fn = is_undef(ENCLOSURE_BUILD) ? 96 : 48;
 
 // ======================================================
 // PCB DIMENSIONS
@@ -16,6 +16,11 @@ $fn = 96;
 pcb_width  = 15.5;
 pcb_height = 12.0;
 pcb_thickness = 1.6;
+
+bme_pcb_w     = pcb_width;
+bme_pcb_h     = pcb_height;
+bme_pcb_t     = pcb_thickness;
+bme_pcb_color = [0.45, 0.1, 0.55];
 
 // Mount holes — centered at corners, sized to PCB edges (keep centers)
 mount_x = 2.3;
@@ -34,7 +39,7 @@ pin_pad_d = 1.9;
 // COLORS
 // ======================================================
 
-pcb_color = [0.45,0.1,0.55];
+pcb_color = bme_pcb_color;
 gold      = [0.92,0.73,0.18];
 silver    = [0.85,0.85,0.85];
 black     = [0.08,0.08,0.08];
@@ -60,18 +65,18 @@ module gold_ring(outer_d, inner_d, h=0.06)
 // PCB
 // ======================================================
 
-module pcb()
+module bme_pcb()
 {
+    color(bme_pcb_color)
     difference()
     {
-        color(pcb_color)
-        cube([pcb_width, pcb_height, pcb_thickness]);
+        cube([bme_pcb_w, bme_pcb_h, bme_pcb_t]);
 
         // Mounting holes
         translate([mount_x, mount_y, -1])
             cylinder(d=mount_hole_d, h=5);
 
-        translate([pcb_width-mount_x, mount_y, -1])
+        translate([bme_pcb_w-mount_x, mount_y, -1])
             cylinder(d=mount_hole_d, h=5);
 
         // Header holes
@@ -79,7 +84,7 @@ module pcb()
         {
             translate([
                 1.4 + i*pin_pitch,
-                pcb_height - 1.5,
+                bme_pcb_h - 1.5,
                 -1
             ])
             cylinder(d=pin_hole_d, h=5);
@@ -293,7 +298,7 @@ module traces()
 
 module gy_bme280()
 {
-    pcb();
+    bme_pcb();
 
     traces();
 
@@ -322,4 +327,5 @@ module gy_bme280()
     header_pins();
 }
 
-gy_bme280();
+if (is_undef(ENCLOSURE_BUILD))
+  gy_bme280();

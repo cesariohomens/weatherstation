@@ -4,18 +4,25 @@
 // Preview: open in OpenSCAD (F5 = preview, F6 = render)
 // Export STL: ./export.sh
 
-$fn = 36;
+$fn = is_undef(ENCLOSURE_BUILD) ? 36 : 48;
 
 // =====================================================================
 // Parameters (mm)
 // =====================================================================
 
 // PCB
-pcb_l       = 55.3;
-pcb_w       = 28.0;
-pcb_t       = 1.6;
-pcb_r       = 1.5;
-pcb_color   = "#1c1c1c";
+esp32_pcb_l     = 55.3;
+esp32_pcb_w     = 28.0;
+esp32_pcb_t     = 1.6;
+esp32_pcb_r     = 1.5;
+esp32_pcb_color = "#1c1c1c";
+
+// Legacy aliases (standalone preview / enclosure helpers)
+pcb_l     = esp32_pcb_l;
+pcb_w     = esp32_pcb_w;
+pcb_t     = esp32_pcb_t;
+pcb_r     = esp32_pcb_r;
+pcb_color = esp32_pcb_color;
 
 // Headers (2.54 mm pitch, 19 pins each side — full length of the board)
 hdr_n       = 19;
@@ -100,9 +107,9 @@ module pad_ring(d_outer, d_inner, h = 0.06) {
 // PCB
 // =====================================================================
 
-module pcb() {
-  color(pcb_color)
-    rounded_plate(pcb_l, pcb_w, pcb_t, pcb_r);
+module esp32_pcb() {
+  color(esp32_pcb_color)
+    rounded_plate(esp32_pcb_l, esp32_pcb_w, esp32_pcb_t, esp32_pcb_r);
 
   // header pad rings (top side)
   color(pin_color)
@@ -279,7 +286,7 @@ module flank_button(is_en) {
 // =====================================================================
 
 module esp32_devkit_38pin() {
-  pcb();
+  esp32_pcb();
 
   // Headers
   pin_row(hdr_n, hdr_x0, hdr_inset_y);
@@ -329,4 +336,5 @@ module esp32_devkit_38pin() {
       cube([7.5, 4.0, 0.05]);
 }
 
-esp32_devkit_38pin();
+if (is_undef(ENCLOSURE_BUILD))
+  esp32_devkit_38pin();
