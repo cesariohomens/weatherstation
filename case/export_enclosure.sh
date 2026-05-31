@@ -17,8 +17,12 @@ openscad -D'export_part="bottom"' -D'show_assembly=false' -D'show_boards=false' 
 echo "Exported stl/enclosure_bottom.stl"
 
 openscad -D'export_part="top_shell"' -D'show_assembly=false' -D'show_boards=false' \
+  -o stl/enclosure_top_shell.stl "$SRC"
+echo "Exported stl/enclosure_top_shell.stl (shell only — no logo)"
+
+openscad -D'export_part="top_shell"' -D'show_assembly=false' -D'show_boards=false' \
   -o stl/enclosure_top.stl "$SRC"
-echo "Exported stl/enclosure_top.stl (shell — assign body colour in slicer)"
+echo "Exported stl/enclosure_top.stl (alias of top_shell)"
 
 openscad -D'export_part="top_logo"' -D'show_assembly=false' -D'show_boards=false' \
   -o stl/enclosure_top_logo.stl "$SRC"
