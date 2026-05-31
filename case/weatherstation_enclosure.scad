@@ -61,9 +61,9 @@ vent_count  = 5;
 // BME280 snap mount — bottom socket pillars + top boss + thin pin (no screws)
 bme_bottom_od        = 4.8;    // large bottom pillar
 bme_bottom_h         = bme_z - floor;
-bme_socket_d         = 2.65;   // bore in bottom pillar (receives top pin)
+bme_socket_d         = 2.75;   // bore in bottom pillar (receives top pin)
 bme_socket_depth     = 3.5;    // socket depth from pillar top
-bme_pin_d            = 2.55;   // thin pin — passes mount_hole_d 3.0 mm
+bme_pin_d            = 2.50;   // thin pin — passes mount_hole_d 3.0 mm (0.125 mm/side in socket)
 bme_top_boss_od      = 4.8;    // large top pillar under lid
 bme_pin_board_clear  = 0.25;   // gap between PCB top and top boss
 
@@ -85,11 +85,11 @@ lid_font         = "Liberation Sans:style=Bold";
 lid_font_light   = "Liberation Sans:style=Regular";
 lid_logo_color   = [1, 1, 1];
 
-// Preview / export
-show_assembly = true;
-show_boards   = true;
+// Preview / export — F5/F6 in OpenSCAD uses export_part; export script overrides via -D
+show_assembly = false;
+show_boards   = false;
 show_top      = true;
-export_part   = "assembly";
+export_part   = "top";       // "top" | "top_shell" | "top_logo" | "bottom" | "assembly"
 
 case_gray_dark  = [0.34, 0.35, 0.37];
 case_gray_mid   = [0.46, 0.47, 0.49];
@@ -359,19 +359,23 @@ module enclosure_top_shell() {
   shell_h = case_h - floor;
 
   color(case_gray_light)
-    difference() {
-      union() {
-        translate([0, 0, floor])
-          rounded_block(case_l, case_w, shell_h, corner_r);
-        snap_clips_top();
-        bme_top_mount_pillars();
+    union() {
+      difference() {
+        union() {
+          translate([0, 0, floor])
+            rounded_block(case_l, case_w, shell_h, corner_r);
+          snap_clips_top();
+        }
+
+        inner_cavity(case_l, case_w, body_top_z - floor + 0.01, floor, corner_r);
+
+        vent_grille_cut_y(vent_face_y, vent_cx, vent_cz, vent_w, vent_h);
+        usb_cut();
+        lid_release_notch();
       }
 
-      inner_cavity(case_l, case_w, body_top_z - floor + 0.01, floor, corner_r);
-
-      vent_grille_cut_y(vent_face_y, vent_cx, vent_cz, vent_w, vent_h);
-      usb_cut();
-      lid_release_notch();
+      // Outside difference — inner_cavity would otherwise cut these away
+      bme_top_mount_pillars();
     }
 }
 
