@@ -1,7 +1,7 @@
 // Weather station enclosure — indie consumer-electronics aesthetic
 // Fits ESP32 DevKit 38-pin + GY-BME280 breakout
 //
-// Base = floor tray + standoffs. Top = walls + flat lid only.
+// Base = floor tray + ESP32/BME standoffs. Top = walls + lid + BME snap pins.
 //
 // Export: ./export_enclosure.sh
 // Preview: F5 / F6 in OpenSCAD
@@ -58,9 +58,14 @@ vent_h      = 8.0;
 vent_slot_w = 0.85;
 vent_count  = 5;
 
-// BME280 standoffs (align with mount_x / mount_y in gy_bme280.scad)
-bme_standoff_od  = 4.8;
-bme_screw_hole_d = 2.2;   // M2 tap / clearance in plastic
+// BME280 snap mount — bottom socket pillars + top boss + thin pin (no screws)
+bme_bottom_od        = 4.8;    // large bottom pillar
+bme_bottom_h         = bme_z - floor;
+bme_socket_d         = 2.65;   // bore in bottom pillar (receives top pin)
+bme_socket_depth     = 3.5;    // socket depth from pillar top
+bme_pin_d            = 2.55;   // thin pin — passes mount_hole_d 3.0 mm
+bme_top_boss_od      = 4.8;    // large top pillar under lid
+bme_pin_board_clear  = 0.25;   // gap between PCB top and top boss
 
 // ESP32 corner-pin standoffs (1st + 19th pin on each header row)
 esp_standoff_od = 4.0;
@@ -250,23 +255,49 @@ module lid_emboss_decor() {
   }
 }
 
-module bme_mount_standoff_at(lx, ly) {
-  standoff_h = bme_z - floor;
+module bme_mount_transform() {
+  translate([bme_x + bme_pcb_w / 2, bme_y + bme_pcb_h / 2, 0])
+    rotate([0, 0, bme_rotate])
+      translate([-bme_pcb_w / 2, -bme_pcb_h / 2, 0])
+        children(0);
+}
+
+// Bottom — large pillar with socket bore (pin from top inserts here)
+module bme_bottom_pillar_at(lx, ly) {
   difference() {
     translate([lx, ly, floor])
-      cylinder(d = bme_standoff_od, h = standoff_h);
-    translate([lx, ly, floor - 0.5])
-      cylinder(d = bme_screw_hole_d, h = standoff_h + 1);
+      cylinder(d = bme_bottom_od, h = bme_bottom_h);
+    translate([lx, ly, bme_z - bme_socket_depth - 0.01])
+      cylinder(d = bme_socket_d, h = bme_socket_depth + 0.5);
   }
 }
 
-module bme_mount_standoffs() {
+module bme_bottom_mount_pillars() {
   color(case_gray_mid)
-    translate([bme_x + bme_pcb_w / 2, bme_y + bme_pcb_h / 2, 0])
-      rotate([0, 0, bme_rotate])
-        translate([-bme_pcb_w / 2, -bme_pcb_h / 2, 0])
-          for (hole = [[mount_x, mount_y], [bme_pcb_w - mount_x, mount_y]])
-            bme_mount_standoff_at(hole[0], hole[1]);
+    bme_mount_transform()
+      for (hole = [[mount_x, mount_y], [bme_pcb_w - mount_x, mount_y]])
+        bme_bottom_pillar_at(hole[0], hole[1]);
+}
+
+// Top — large boss + thin pin through PCB hole into bottom socket
+module bme_top_pillar_at(lx, ly) {
+  boss_z0 = bme_z + bme_pcb_t + bme_pin_board_clear;
+  pin_z0  = bme_z - bme_socket_depth + 0.8;   // pin tip inside socket
+  pin_h   = boss_z0 - pin_z0;
+
+  union() {
+    translate([lx, ly, boss_z0])
+      cylinder(d = bme_top_boss_od, h = body_top_z - boss_z0);
+    translate([lx, ly, pin_z0])
+      cylinder(d1 = bme_pin_d, d2 = bme_pin_d - 0.08, h = pin_h);
+  }
+}
+
+module bme_top_mount_pillars() {
+  color(case_gray_mid)
+    bme_mount_transform()
+      for (hole = [[mount_x, mount_y], [bme_pcb_w - mount_x, mount_y]])
+        bme_top_pillar_at(hole[0], hole[1]);
 }
 
 module esp_pin_standoff_at(lx, ly) {
@@ -308,7 +339,7 @@ module enclosure_bottom() {
         floor_retention_lip();
       }
 
-    bme_mount_standoffs();
+    bme_bottom_mount_pillars();
     esp_pin_standoffs();
   }
 }
@@ -333,6 +364,7 @@ module enclosure_top_shell() {
         translate([0, 0, floor])
           rounded_block(case_l, case_w, shell_h, corner_r);
         snap_clips_top();
+        bme_top_mount_pillars();
       }
 
       inner_cavity(case_l, case_w, body_top_z - floor + 0.01, floor, corner_r);
